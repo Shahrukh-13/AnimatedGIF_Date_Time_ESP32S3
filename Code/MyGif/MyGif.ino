@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <TFT_eSPI.h>
 #include <AnimatedGIF.h>
+#include <EEPROM.h>
 #include "green_liquid.h"
 
 
@@ -16,8 +17,19 @@ const int   daylightOffset_sec = 3600;
 String Date;
 String Time;
 
-const char* ssid       = "Shahrukh13";
-const char* password   = "shahan-2020";
+bool wifi_flag;
+
+String ssid_i;
+String password_i;
+
+String inputMessage = "" ;
+String inputParam = "" ;
+    
+char ssid[100];
+char password[100];
+
+String input = "";
+String command = "";
 
 static  char                chBuffer[81];
 
@@ -33,11 +45,15 @@ char        AM_PM[3];                                           // AM/PM.
 
 uint8_t wifi_connection_timeout_count;
 
+bool DISPLAY_GIF;
 void setup() 
 {
   Serial.begin(115200);
+  EEPROM.begin(512);
   pinMode(15, OUTPUT); // Set pin 15 as output and write it HIGH to boot with external power...
-  digitalWrite(15,HIGH); 
+  digitalWrite(15,HIGH);
+  pinMode(14,INPUT); // button IO14
+   
   wifi_connection_timeout_count = 0;
   tft.begin();
   tft.setRotation(1);
@@ -47,42 +63,66 @@ void setup()
   gif.open((uint8_t *)GIF_IMAGE, sizeof(GIF_IMAGE), GIFDraw);
   tft.startWrite(); 
   tft.setTextDatum(TC_DATUM);
-  //connect to WiFi
-  Serial.printf("Connecting to %s ", ssid);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED && wifi_connection_timeout_count <10) 
-  {
-      delay(500);
-      Serial.print(".");
-      tft.drawString("Connecting", tft.width() / 2, 0, 4);
-      wifi_connection_timeout_count++;
-  }
 
-  if(wifi_connection_timeout_count >=10)
+  if(digitalRead(14) == LOW)
   {
-    ESP.restart();
+    display_menu();
+    DISPLAY_GIF = 0;
   }
-  Serial.println(" CONNECTED");
-  tft.fillScreen(TFT_BLACK);
-  tft.drawString("Connected", tft.width() / 2, 0, 4);
+  else
+  {
+    DISPLAY_GIF = 1;
+
+    ssid_i = read_String(0);
+    password_i = read_String(101);
+
+    ssid_i.toCharArray(ssid, ssid_i.length()+1);
+    password_i.toCharArray(password, password_i.length()+1);
     
-  //init and get the time
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  GetLocalTime();
-
-  //disconnect WiFi as it's no longer needed
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
-  tft.fillScreen(TFT_BLACK);
+    //connect to WiFi
+    Serial.printf("Connecting to %s ", ssid);
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED && wifi_connection_timeout_count <10) 
+    {
+        delay(500);
+        Serial.print(".");
+        tft.drawString("Connecting", tft.width() / 2, 0, 4);
+        wifi_connection_timeout_count++;
+    }
+  
+    if(wifi_connection_timeout_count >=10)
+    {
+      ESP.restart();
+    }
+    Serial.println(" CONNECTED");
+    tft.fillScreen(TFT_BLACK);
+    tft.drawString("Connected", tft.width() / 2, 0, 4);
+      
+    //init and get the time
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    GetLocalTime();
+  
+    //disconnect WiFi as it's no longer needed
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    tft.fillScreen(TFT_BLACK);
+  }
 }
 
 void loop()
-{ 
-  //tft.drawString(Date_Time, 0, 0, 4);;
-  tft.drawString(Date, tft.width() / 2, 0, 4);
-  tft.drawString(Time, tft.width() / 2, 30, 4);
-  gif.playFrame(false, NULL);
-  GetLocalTime();  
+{
+  if(DISPLAY_GIF == 0)
+  { 
+    scan_connect_reset();
+  }
+  else
+  {
+    //tft.drawString(Date_Time, 0, 0, 4);;
+    tft.drawString(Date, tft.width() / 2, 0, 4);
+    tft.drawString(Time, tft.width() / 2, 30, 4);
+    gif.playFrame(false, NULL);
+    GetLocalTime(); 
+  } 
 }
 
 void GetLocalTime()
@@ -130,4 +170,111 @@ void GetLocalTime()
    sprintf(chBuffer, "%s:%s %s", String(chHour), String(chMinute), String(AM_PM));
    Time = String(chBuffer);
   //Serial.print(Date_Time);
+}
+
+
+void writeString(char add,String data)
+{
+  int _size = data.length();
+  int i;
+  for(i=0;i<_size;i++)
+  {
+    EEPROM.write(add+i,data[i]);
+  }
+  EEPROM.write(add+_size,'\0');   //Add termination null character for String Data
+  EEPROM.commit();
+}
+
+
+String read_String(char add)
+{
+  int i;
+  char data[100]; //Max 100 Bytes
+  int len=0;
+  unsigned char k;
+  k=EEPROM.read(add);
+  while(k != '\0' && len<500)   //Read until null character
+  {    
+    k=EEPROM.read(add+len);
+    data[len]=k;
+    len++;
+  }
+  data[len]='\0';
+  return String(data);
+}
+
+void scan_connect_reset()
+{  
+  while (Serial.available() > 0)
+  {            
+    //input += (char) Serial.read(); 
+    input =Serial.readString();
+    //command =input.substring(0,input.length()-2);  //both NL and CR
+    command =input.substring(0,input.length());  // No newline
+    if(command == "scan")
+    {      
+      Serial.println("scan start");
+      // WiFi.scanNetworks will return the number of networks found
+      int n = WiFi.scanNetworks();
+      Serial.println("scan done");
+      if (n == 0) 
+      {
+        Serial.println("no networks found");
+      } 
+      else 
+      {
+        Serial.print(n);
+        Serial.println(" networks found");
+        for (int i = 0; i < n; ++i) 
+        {            
+          // Print SSID and RSSI for each network found
+          Serial.print(i + 1);
+          Serial.print(": ");
+          Serial.print(WiFi.SSID(i));
+          Serial.print(" (");
+          Serial.print(WiFi.RSSI(i));
+          Serial.print(")");
+          Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN)?" ":"*");
+          delay(10);
+        }
+      }
+      Serial.println("");
+      Serial.print("If you want to connect to a new network, enter 'ssid' and 'passowrd' in following format: ssid,password");
+      Serial.println();
+    }
+
+    else if(command == "reset")
+    {
+      ESP.restart();        
+    }
+    else
+    {
+      ssid_i = input.substring(0,input.indexOf(','));
+      password_i =   input.substring(input.indexOf(',')+1);
+  
+      writeString(0, ssid_i);
+      writeString(101, password_i);
+  
+      Serial.println();
+      Serial.print("new ssid: ");
+      Serial.print(ssid_i);
+      Serial.print(" , ");
+      Serial.print("new password: ");
+      Serial.print(password_i);
+      Serial.println();
+           
+      delay(5); 
+    }
+  }
+}
+
+void display_menu()
+{
+  Serial.println();
+  Serial.print("Enter 'scan' to scan for available networks");
+  Serial.println();
+  Serial.print("If you want to connect to a new network, enter 'ssid' and 'passowrd' in following format: ssid,password");
+  Serial.println();
+  Serial.print("Enter 'reset' to reset");
+  Serial.println();
 }
