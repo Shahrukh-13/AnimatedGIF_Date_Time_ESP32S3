@@ -1,0 +1,65 @@
+*************************** START ****************************
+START TIME: 202404030910
+CONNECT BAUD: 115200
+set state: ESP_DL_SYNC
+serial port opened
+-----------
+baud:115200
+root baud:115200
+-------------
+===============BAUD : 115200===============CALL DEVICE SYNC
+connecting...
+mac l: 0x99a1e440
+mac h: 0x8065
+get mac res: 1
+get flash id : 0x001840ef
+manufacturer_id: 0xef
+device_id: 0x4018
+
+Leaving...
+com closed
+Use time: 2 s
+Download result: PASS
+*************************** END ****************************
+
+*************************** START ****************************
+START TIME: 202404030910
+CONNECT BAUD: 115200
+set state: ESP_DL_SYNC
+serial port opened
+-----------
+baud:115200
+root baud:115200
+-------------
+===============BAUD : 115200===============CALL DEVICE SYNC
+connecting...
+mac l: 0x99a1e440
+mac h: 0x8065
+get mac res: 1
+get flash id : 0x001840ef
+manufacturer_id: 0xef
+device_id: 0x4018
+*************************** START ****************************
+START TIME: 202404030911
+CONNECT BAUD: 115200
+set state: ESP_DL_SYNC
+serial port opened
+-----------
+baud:115200
+root baud:115200
+-------------
+===============BAUD : 115200===============CALL DEVICE SYNC
+connecting...
+mac l: 0x99a1e440
+mac h: 0x8065
+get mac res: 1
+get flash id : 0x001840ef
+manufacturer_id: 0xef
+device_id: 0x4018
+
+Leaving...
+com closed
+Use time: 2 s
+Download result: PASS
+*************************** END ****************************
+

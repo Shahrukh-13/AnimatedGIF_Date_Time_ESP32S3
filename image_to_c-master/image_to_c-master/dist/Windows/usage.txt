@@ -1,0 +1,21 @@
+open cmd
+
+cd to this folder
+
+type following:
+
+image_to_c64.exe 'filename'.gif > 'filename'.h
+
+
+
+example:
+
+cd C:\Users\mshah\OneDrive\Desktop\MyGif\image_to_c-master\image_to_c-master\dist\Windows
+
+image_to_c64.exe firewatch.gif > firewatch.h
+
+
+
+
+Note:
+put the .gif file in (image_to_c-master\image_to_c-master\dist\Windows) folder for conversion to .h file
